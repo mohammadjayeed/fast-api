@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status, HTTPException
 from pydantic import BaseModel
 from random import randrange
 
@@ -30,10 +30,11 @@ blog_posts = [{
 ]
 
 def find_post(id):
-    for p in blog_posts:
-        if str(p['id']) == id:
+    for i,p in enumerate(blog_posts):
+        if p['id'] == id:
             print('True')
-            return p
+            return p,i
+    return None, None
 
 
 @app.get("/")  
@@ -49,7 +50,7 @@ def get_posts():
 
 
 # each model has a method called .dict
-@app.post('/posts')
+@app.post('/posts', status_code=status.HTTP_201_CREATED)
 def create_posts(posts: Post):
     post = posts.model_dump()
     post['id'] = randrange(0,10000)
@@ -60,6 +61,16 @@ def create_posts(posts: Post):
 
 @app.get('/posts/{id}') #path parameters are usually strings
 def get_post(id:int):  # type hinting in action ?
-    post = find_post(id)
+    post,index = find_post(id)
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
     return {'post_detail':post}
 
+
+@app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id:int): 
+    post,index = find_post(id)
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
+    else:
+        blog_posts.pop(index)
