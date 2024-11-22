@@ -67,10 +67,22 @@ def get_post(id:int):  # type hinting in action ?
     return {'post_detail':post}
 
 
+@app.put('/posts/{id}',status_code=status.HTTP_200_OK)
+def update_post(id:int, posts:Post): 
+    _,index = find_post(id)
+    if not index:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
+    else:
+        updated_post = posts.model_dump()
+        updated_post['id'] = id
+        blog_posts[index]= updated_post
+        return {'data':posts}
+        
+
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int): 
-    post,index = find_post(id)
-    if not post:
+    _,index = find_post(id)
+    if not index:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
     else:
         blog_posts.pop(index)
