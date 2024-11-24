@@ -81,7 +81,7 @@ def root():  # try to be descriptive
 
 @app.get("/posts")
 def get_posts():
-    cursor.execute(""" SELECT * FROM posts""")
+    cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
     posts = cursor.fetchall()
     return {"data":posts}
 
@@ -102,28 +102,39 @@ def create_posts(posts: Post):
 
 @app.get('/posts/{id}') #path parameters are usually strings
 def get_post(id:int):  # type hinting in action ?
-    post,index = find_post(id)
+    # post,index = find_post(id)
+    
+
+    cursor.execute(""" SELECT * FROM posts WHERE id = %s""", (str(id),))
+    post = cursor.fetchone()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
+
     return {'post_detail':post}
 
 
 @app.put('/posts/{id}',status_code=status.HTTP_200_OK)
 def update_post(id:int, posts:Post): 
-    _,index = find_post(id)
-    if not index:
+
+
+    cursor.execute(""" UPDATE posts SET title=%s, content=%s, published=%s WHERE id = %s RETURNING *""",(posts.title, posts.content, posts.published,str(id)))
+    post = cursor.fetchone()
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
-    else:
-        updated_post = posts.model_dump()
-        updated_post['id'] = id
-        blog_posts[index]= updated_post
-        return {'data':posts}
+
+    conn.commit()
+
+    return {'data':posts}
+
         
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int): 
-    _,index = find_post(id)
-    if not index:
+    # _,index = find_post(id)
+    cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
+    post = cursor.fetchone()
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
-    else:
-        blog_posts.pop(index)
+    conn.commit()
+
+    
