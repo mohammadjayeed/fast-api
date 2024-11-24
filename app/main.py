@@ -6,8 +6,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 import os
-
-
+from dotenv import load_dotenv
+import sys
 
 app = FastAPI()
 
@@ -20,22 +20,34 @@ class Post(BaseModel):
     content: str
     published: bool = True
 
-while True:
-    try:
-        conn = psycopg2.connect(host="localhost", 
-                                database="fastapi_social_media", 
-                                user="postgres",
-                                password="root"
-                                ,cursor_factory=RealDictCursor)
-        cursor = conn.cursor()
-        print("database connection was successful")
-        break
+def load_env_variables():
+    load_dotenv(override=True)  # Reloads the .env file and overrides existing values
 
-    except Exception as error:
-        print("connection failed ",error)
-        time.sleep(10)
+    host = os.getenv("HOST")
+    database = os.getenv("DATABASE")
+    user = os.getenv("USER")
+    password = os.getenv("PASSWORD")
+
+    return host, database, user, password
 
 
+host,database,user,password = load_env_variables()
+
+
+    
+try:
+    conn = psycopg2.connect(host=host, 
+                            database=database, 
+                            user=user,
+                            password=password
+                            ,cursor_factory=RealDictCursor)
+    cursor = conn.cursor()
+    print("database connection was successful")
+
+except Exception as error:
+    print("connection failed ",error)
+    sys.exit(1)
+        
 
 blog_posts = [{
     'id':1,
@@ -50,6 +62,8 @@ blog_posts = [{
 
 }
 ]
+
+
 
 def find_post(id):
     for i,p in enumerate(blog_posts):
@@ -67,18 +81,23 @@ def root():  # try to be descriptive
 
 @app.get("/posts")
 def get_posts():
-    # logic
-    return {"data":blog_posts}
+    cursor.execute(""" SELECT * FROM posts""")
+    posts = cursor.fetchall()
+    return {"data":posts}
 
 
 # each model has a method called .dict
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
 def create_posts(posts: Post):
-    post = posts.model_dump()
-    post['id'] = randrange(0,10000)
-    blog_posts.append(post)
+    # post = posts.model_dump()
+    # post['id'] = randrange(0,10000)
+    # blog_posts.append(post)
 
-    return {'data':posts}
+    cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""", (posts.title, posts.content, posts.published) )
+    new_post = cursor.fetchone()
+    conn.commit()
+
+    return {'data':new_post}
 
 
 @app.get('/posts/{id}') #path parameters are usually strings
