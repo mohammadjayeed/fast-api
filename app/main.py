@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from pydantic import BaseModel
 from random import randrange
 import psycopg2
@@ -8,6 +8,13 @@ import time
 import os
 from dotenv import load_dotenv
 import sys
+from .utils import load_env_variables
+from . import models
+from .database import engine, get_db
+from sqlalchemy.orm import Session
+
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -15,20 +22,16 @@ app = FastAPI()
 
 # function, decorator, http method and path
 
+
+
+
+
 class Post(BaseModel):
     title : str
     content: str
     published: bool = True
 
-def load_env_variables():
-    load_dotenv(override=True)  # Reloads the .env file and overrides existing values
 
-    host = os.getenv("HOST")
-    database = os.getenv("DATABASE")
-    user = os.getenv("USER")
-    password = os.getenv("PASSWORD")
-
-    return host, database, user, password
 
 
 host,database,user,password = load_env_variables()
@@ -77,6 +80,10 @@ def find_post(id):
 def root():  # try to be descriptive
     return {"message":"hello world fastapi"}
 
+
+@app.get("/sqlalchemy")  
+def root_test(db: Session = Depends(get_db)):
+    return {"message":"success"}
 
 
 @app.get("/posts")
