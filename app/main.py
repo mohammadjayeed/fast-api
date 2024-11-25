@@ -81,39 +81,42 @@ def root():  # try to be descriptive
     return {"message":"hello world fastapi"}
 
 
-@app.get("/sqlalchemy")  
-def root_test(db: Session = Depends(get_db)):
-    return {"message":"success"}
-
 
 @app.get("/posts")
-def get_posts():
-    cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
-    posts = cursor.fetchall()
+def get_posts(db: Session = Depends(get_db)):
+    # cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
+    # posts = cursor.fetchall()
+    posts = db.query(models.Post).all()
     return {"data":posts}
 
 
 # each model has a method called .dict
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
-def create_posts(posts: Post):
+def create_posts(posts: Post, db: Session = Depends(get_db)):
+
+    new_post = models.Post(**posts.model_dump())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     # post = posts.model_dump()
     # post['id'] = randrange(0,10000)
     # blog_posts.append(post)
 
-    cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""", (posts.title, posts.content, posts.published) )
-    new_post = cursor.fetchone()
-    conn.commit()
+    # cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""", (posts.title, posts.content, posts.published) )
+    # new_post = cursor.fetchone()
+    # conn.commit()
 
     return {'data':new_post}
 
 
 @app.get('/posts/{id}') #path parameters are usually strings
-def get_post(id:int):  # type hinting in action ?
+def get_post(id:int, db: Session = Depends(get_db)):  # type hinting in action ?
     # post,index = find_post(id)
     
 
-    cursor.execute(""" SELECT * FROM posts WHERE id = %s""", (str(id),))
-    post = cursor.fetchone()
+    # cursor.execute(""" SELECT * FROM posts WHERE id = %s""", (str(id),))
+    # post = cursor.fetchone()
+    post = db.query(models.Post).filter(models.Post.id == id).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
 
@@ -121,27 +124,36 @@ def get_post(id:int):  # type hinting in action ?
 
 
 @app.put('/posts/{id}',status_code=status.HTTP_200_OK)
-def update_post(id:int, posts:Post): 
+def update_post(id:int, posts:Post,  db: Session = Depends(get_db)): 
 
 
-    cursor.execute(""" UPDATE posts SET title=%s, content=%s, published=%s WHERE id = %s RETURNING *""",(posts.title, posts.content, posts.published,str(id)))
-    post = cursor.fetchone()
-    if not post:
+    # cursor.execute(""" UPDATE posts SET title=%s, content=%s, published=%s WHERE id = %s RETURNING *""",(posts.title, posts.content, posts.published,str(id)))
+    # post = cursor.fetchone()
+
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+
+    if not post_query.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
 
-    conn.commit()
 
-    return {'data':posts}
+    post_query.update(posts.model_dump(), synchronize_session=False)
+    db.commit()
+
+    return {'data':post_query.first()}
 
         
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id:int): 
+def delete_post(id:int, db: Session = Depends(get_db)): 
     # _,index = find_post(id)
-    cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
-    post = cursor.fetchone()
-    if not post:
+    # cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
+    # post = cursor.fetchone()
+    post = db.query(models.Post).filter(models.Post.id == id)
+    
+    if not post.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
-    conn.commit()
+    
+    post.delete(synchronize_session=False)
+    db.commit()
 
     
