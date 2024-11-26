@@ -9,7 +9,7 @@ import os
 from dotenv import load_dotenv
 import sys
 from .utils import load_env_variables
-from . import models
+from . import models, schemas
 from .database import engine, get_db
 from sqlalchemy.orm import Session
 
@@ -18,63 +18,25 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# fastapi works its way down the first match
 
+# fastapi works its way down the first match
 # function, decorator, http method and path
 
-
-
-
-
-class Post(BaseModel):
-    title : str
-    content: str
-    published: bool = True
-
-
-
-
-host,database,user,password = load_env_variables()
-
-
     
-try:
-    conn = psycopg2.connect(host=host, 
-                            database=database, 
-                            user=user,
-                            password=password
-                            ,cursor_factory=RealDictCursor)
-    cursor = conn.cursor()
-    print("database connection was successful")
+# host,database,user,password = load_env_variables()
+# try:
+#     conn = psycopg2.connect(host=host, 
+#                             database=database, 
+#                             user=user,
+#                             password=password
+#                             ,cursor_factory=RealDictCursor)
+#     cursor = conn.cursor()
+#     print("database connection was successful")
 
-except Exception as error:
-    print("connection failed ",error)
-    sys.exit(1)
+# except Exception as error:
+#     print("connection failed ",error)
+#     sys.exit(1)
         
-
-blog_posts = [{
-    'id':1,
-    'title':'title 1',
-    'content':'content 1'
-
-},
-    {
-    'id':2,
-    'title':'title 2',
-    'content':'content 2'
-
-}
-]
-
-
-
-def find_post(id):
-    for i,p in enumerate(blog_posts):
-        if p['id'] == id:
-            print('True')
-            return p,i
-    return None, None
-
 
 @app.get("/")  
 def root():  # try to be descriptive
@@ -84,20 +46,25 @@ def root():  # try to be descriptive
 
 @app.get("/posts")
 def get_posts(db: Session = Depends(get_db)):
-    # cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
-    # posts = cursor.fetchall()
+
     posts = db.query(models.Post).all()
     return {"data":posts}
+
+    # cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
+    # posts = cursor.fetchall()
 
 
 # each model has a method called .dict
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
-def create_posts(posts: Post, db: Session = Depends(get_db)):
+def create_posts(posts: schemas.PostCreateUpdate, db: Session = Depends(get_db)):
 
     new_post = models.Post(**posts.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
+    return {'data':new_post}
+
+
     # post = posts.model_dump()
     # post['id'] = randrange(0,10000)
     # blog_posts.append(post)
@@ -106,29 +73,25 @@ def create_posts(posts: Post, db: Session = Depends(get_db)):
     # new_post = cursor.fetchone()
     # conn.commit()
 
-    return {'data':new_post}
 
 
-@app.get('/posts/{id}') #path parameters are usually strings
+@app.get('/posts/{id}') # path parameters are usually strings
 def get_post(id:int, db: Session = Depends(get_db)):  # type hinting in action ?
-    # post,index = find_post(id)
     
-
-    # cursor.execute(""" SELECT * FROM posts WHERE id = %s""", (str(id),))
-    # post = cursor.fetchone()
     post = db.query(models.Post).filter(models.Post.id == id).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail={'message':f'id {id} not found'},)
 
     return {'post_detail':post}
+    
+    
+    # post,index = find_post(id)
+    # cursor.execute(""" SELECT * FROM posts WHERE id = %s""", (str(id),))
+    # post = cursor.fetchone()
 
 
 @app.put('/posts/{id}',status_code=status.HTTP_200_OK)
-def update_post(id:int, posts:Post,  db: Session = Depends(get_db)): 
-
-
-    # cursor.execute(""" UPDATE posts SET title=%s, content=%s, published=%s WHERE id = %s RETURNING *""",(posts.title, posts.content, posts.published,str(id)))
-    # post = cursor.fetchone()
+def update_post(id:int, posts:schemas.PostCreateUpdate,  db: Session = Depends(get_db)): 
 
     post_query = db.query(models.Post).filter(models.Post.id == id)
 
@@ -141,13 +104,13 @@ def update_post(id:int, posts:Post,  db: Session = Depends(get_db)):
 
     return {'data':post_query.first()}
 
+    # cursor.execute(""" UPDATE posts SET title=%s, content=%s, published=%s WHERE id = %s RETURNING *""",(posts.title, posts.content, posts.published,str(id)))
+    # post = cursor.fetchone()
         
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int, db: Session = Depends(get_db)): 
-    # _,index = find_post(id)
-    # cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
-    # post = cursor.fetchone()
+
     post = db.query(models.Post).filter(models.Post.id == id)
     
     if not post.first():
@@ -156,4 +119,7 @@ def delete_post(id:int, db: Session = Depends(get_db)):
     post.delete(synchronize_session=False)
     db.commit()
 
+    # _,index = find_post(id)
+    # cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
+    # post = cursor.fetchone()
     
