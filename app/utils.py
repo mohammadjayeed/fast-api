@@ -17,3 +17,7 @@ def load_env_variables():
 def hash(password: str):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     return pwd_context.hash(password)
+
+def verify(entered_password: str, password: str):
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    return pwd_context.verify(entered_password, password)
