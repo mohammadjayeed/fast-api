@@ -25,3 +25,6 @@ class UserCreateResponse(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password : str
+
+class Token(BaseModel):
+    token: str

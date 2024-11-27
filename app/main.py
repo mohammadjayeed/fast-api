@@ -12,7 +12,7 @@ from .utils import load_env_variables, hash
 from . import models, schemas
 from .database import engine, get_db
 from sqlalchemy.orm import Session
-from .routers import post, user, authentication
+from .routers import auth, post, user
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -20,7 +20,7 @@ app = FastAPI()
 
 app.include_router(post.router)
 app.include_router(user.router)
-app.include_router(authentication.router)
+app.include_router(auth.router)
 
 # fastapi works its way down the first match
 # function, decorator, http method and path
