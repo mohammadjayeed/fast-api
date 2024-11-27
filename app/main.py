@@ -8,7 +8,7 @@ import time
 import os
 from dotenv import load_dotenv
 import sys
-from .utils import load_env_variables
+from .utils import load_env_variables, hash
 from . import models, schemas
 from .database import engine, get_db
 from sqlalchemy.orm import Session
@@ -123,3 +123,14 @@ def delete_post(id:int, db: Session = Depends(get_db)):
     # cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
     # post = cursor.fetchone()
     
+
+
+@app.post('/users', status_code=status.HTTP_201_CREATED, response_model= schemas.UserCreateResponse )
+def create_users(users: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    users.password = hash(users.password)
+    new_user = models.User(**users.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user

@@ -1,5 +1,8 @@
 import os
 from dotenv import load_dotenv
+from passlib.context import CryptContext
+
+
 def load_env_variables():
     load_dotenv(override=True)  # Reloads the .env file and overrides existing values
 
@@ -9,3 +12,8 @@ def load_env_variables():
     password = os.getenv("PASSWORD")
 
     return host, database, user, password
+
+
+def hash(password: str):
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    return pwd_context.hash(password)
