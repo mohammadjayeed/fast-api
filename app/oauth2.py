@@ -17,7 +17,7 @@ def create_access_token(data: dict):
     
     # datetime.now(timezone.utc) including timezone.utc, we avoid ambiguity and potential errors
     # when working with time-sensitive applications
-    expire = datetime.now(timezone.utc) + timedelta(minutes=20)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=1)
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))

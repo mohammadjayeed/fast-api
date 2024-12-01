@@ -16,7 +16,7 @@ router = APIRouter(
     tags=['authentication']
 )
 
-@router.post('/login', status_code=status.HTTP_200_OK)
+@router.post('/login', status_code=status.HTTP_200_OK, response_model=schemas.Token)
 def login(user_credentials: OAuth2PasswordRequestForm= Depends(), db: Session = Depends(get_db)):
 
 
@@ -43,7 +43,3 @@ def login(user_credentials: OAuth2PasswordRequestForm= Depends(), db: Session = 
     
     return {"access_token": token, "token_type": "bearer"}
 
-# @router.post('/verify', status_code=status.HTTP_200_OK )
-# def verify_me(token: Annotated[str, Depends(oauth2_scheme)]):
-#     print('here')
-#     verify_token(token)
