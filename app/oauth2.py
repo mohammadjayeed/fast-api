@@ -3,10 +3,12 @@ from jwt import InvalidTokenError
 import os
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from fastapi import Query
 from . import schemas
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from .database import get_db
+from . import models
 
 load_dotenv(override=True)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -36,7 +38,7 @@ def verify_access_token(token: str , credentials_exception):
         if email is None or id is None:
             raise credentials_exception
         
-        token_data = schemas.TokenData(email=email, id=str(id))
+        token_data = schemas.TokenData(email=email, id=id)
     except InvalidTokenError as e:
         raise credentials_exception
     
@@ -44,8 +46,14 @@ def verify_access_token(token: str , credentials_exception):
     return token_data.id
     
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Crendentials",
                                           headers={"WWW-Authenticate":"Bearer"})
     
-    return verify_access_token(token, credentials_exception)
+    token = verify_access_token(token, credentials_exception)
+
+    user = db.query(models.User).filter(models.User.id==token).first()
+
+    return user
+
+    

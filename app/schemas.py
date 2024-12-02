@@ -32,4 +32,4 @@ class Token(BaseModel):
     
 class TokenData(BaseModel):
     email: EmailStr
-    id: str
+    id: int
