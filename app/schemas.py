@@ -1,9 +1,11 @@
 from pydantic import BaseModel, EmailStr
 import datetime
+
 class PostBase(BaseModel):
     title : str
     content: str
     published: bool = True
+    # owner_id : int 
 
 class PostCreateUpdate(PostBase):
     pass
@@ -12,6 +14,7 @@ class PostCreateUpdate(PostBase):
 class PostResponse(PostBase):
     id : int
     created_at : datetime.datetime
+    owner_id : int
 
 class UserCreate(BaseModel):
     email : EmailStr
