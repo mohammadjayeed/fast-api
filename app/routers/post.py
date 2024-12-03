@@ -21,7 +21,7 @@ def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_c
 
 
 # each model has a method called .dict
-@router.post('/', status_code=status.HTTP_201_CREATED, response_model= schemas.PostResponse )
+@router.post('/', status_code=status.HTTP_201_CREATED, response_model= schemas.PostResponse)
 def create_posts(posts: schemas.PostCreateUpdate, db: Session = Depends(get_db), current_user  = Depends(oauth2.get_current_user)):
 
     print(current_user.email)
