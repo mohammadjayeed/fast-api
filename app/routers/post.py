@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Response, status, HTTPException, APIRouter, Depends
 from .. import models, schemas
@@ -11,9 +11,10 @@ router = APIRouter(
 )
 
 @router.get('/',  response_model = List[schemas.PostResponse])
-def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
+def get_posts(db: Session = Depends(get_db), current_user: str = Depends(oauth2.get_current_user),
+              limit: int =10, skip: int = 1, search: Optional[str] = ""):
 
-    posts = db.query(models.Post).all()
+    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
     return posts
 
     # cursor.execute(""" SELECT * FROM posts ORDER BY id ASC""")
@@ -24,7 +25,7 @@ def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_c
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model= schemas.PostResponse)
 def create_posts(posts: schemas.PostCreateUpdate, db: Session = Depends(get_db), current_user  = Depends(oauth2.get_current_user)):
 
-    print(current_user.email)
+    # print(current_user.email)
     new_post = models.Post(owner_id=current_user.id,**posts.model_dump())
     db.add(new_post)
     db.commit()
