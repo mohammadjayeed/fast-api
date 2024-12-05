@@ -9,8 +9,8 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .database import get_db
 from . import models
-
-load_dotenv(override=True)
+from .config import settings
+# load_dotenv(override=True)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
@@ -19,10 +19,10 @@ def create_access_token(data: dict):
     
     # datetime.now(timezone.utc) including timezone.utc, we avoid ambiguity and potential errors
     # when working with time-sensitive applications
-    expire = datetime.now(timezone.utc) + timedelta(minutes=20)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
 def verify_access_token(token: str , credentials_exception):
@@ -30,7 +30,7 @@ def verify_access_token(token: str , credentials_exception):
 
     try:
         
-        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         email: str = payload.get('email_addr')
         id: int = payload.get('user_id')
         
@@ -39,6 +39,7 @@ def verify_access_token(token: str , credentials_exception):
             raise credentials_exception
         
         token_data = schemas.TokenData(email=email, id=id)
+        
     except InvalidTokenError as e:
         raise credentials_exception
     
